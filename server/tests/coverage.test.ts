@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeCoverage } from '../../shared/coverage.js';
+import { computeCoverage, explorationScore } from '../../shared/coverage.js';
 import { AREAS } from '../../shared/areas.js';
 
 describe('computeCoverage', () => {
@@ -30,5 +30,19 @@ describe('computeCoverage', () => {
   it('returns 0% for empty reasoning and 100% when everything is covered', () => {
     expect(computeCoverage([]).percent).toBe(0);
     expect(computeCoverage(AREAS.map((area) => ({ area, quote: 'x' }))).percent).toBe(100);
+  });
+});
+
+describe('explorationScore', () => {
+  const coverage = (percent: number) => ({ covered: [], shadow: [], percent });
+
+  it('weights area coverage 60% and reflected questions 40%', () => {
+    expect(explorationScore(coverage(50), 2, 4)).toBe(50);
+    expect(explorationScore(coverage(100), 4, 4)).toBe(100);
+    expect(explorationScore(coverage(0), 0, 0)).toBe(0);
+  });
+
+  it('never exceeds 100 even with extra reflections', () => {
+    expect(explorationScore(coverage(100), 9, 4)).toBe(100);
   });
 });

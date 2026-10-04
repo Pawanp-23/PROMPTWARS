@@ -35,5 +35,32 @@ export const FINDING_LABELS: Record<FindingType, string> = {
   conflict: 'Conflict',
 };
 
+/**
+ * Common thinking traps. "Deciding on what we notice first" is anchoring and availability;
+ * the rest are the usual companions. Labels are neutral: they describe a pattern, not a flaw.
+ */
+export const BIASES = [
+  'anchoring',
+  'availability',
+  'confirmation',
+  'social_proof',
+  'sunk_cost',
+  'overconfidence',
+  'optimism',
+  'status_quo',
+] as const;
+export type Bias = (typeof BIASES)[number];
+
+export const BIAS_LABELS: Record<Bias, string> = {
+  anchoring: 'Anchoring',
+  availability: 'Availability',
+  confirmation: 'Confirmation bias',
+  social_proof: 'Bandwagon effect',
+  sunk_cost: 'Sunk cost',
+  overconfidence: 'Overconfidence',
+  optimism: 'Optimism bias',
+  status_quo: 'Status quo bias',
+};
+
 export const REFLECTION_STATUSES = ['considered', 'unknown', 'not_relevant'] as const;
 export type ReflectionStatus = (typeof REFLECTION_STATUSES)[number];

@@ -28,9 +28,24 @@ describe('withFallback', () => {
     expect(tried).toEqual(['a']);
   });
 
+  it('makes a second pass after a short backoff when every model is busy', async () => {
+    let calls = 0;
+    const result = await withFallback(
+      ['a', 'b'],
+      async () => {
+        calls += 1;
+        if (calls <= 2) throw httpError(503);
+        return 'recovered';
+      },
+      { backoffMs: 1 },
+    );
+    expect(result).toBe('recovered');
+    expect(calls).toBe(3);
+  });
+
   it('throws the last error when every model is busy', async () => {
     await expect(
-      withFallback(['a', 'b'], async () => Promise.reject(httpError(429))),
+      withFallback(['a', 'b'], async () => Promise.reject(httpError(429)), { backoffMs: 1 }),
     ).rejects.toThrow('HTTP 429');
   });
 });

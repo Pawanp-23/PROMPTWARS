@@ -1,4 +1,5 @@
 import express, { type ErrorRequestHandler } from 'express';
+import compression from 'compression';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import path from 'node:path';
@@ -38,6 +39,17 @@ export function createApp({ client, speech, staticDir, rateLimitPerMinute = 20 }
           frameAncestors: ["'none'"],
         },
       },
+    }),
+  );
+  // Only our own page may use the microphone; other powerful features are off.
+  app.use((_req, res, next) => {
+    res.setHeader('Permissions-Policy', 'microphone=(self), camera=(), geolocation=(), payment=()');
+    next();
+  });
+  // Gzip JSON and static assets, but never buffer the live audio stream.
+  app.use(
+    compression({
+      filter: (req, res) => !req.path.startsWith('/api/speak') && compression.filter(req, res),
     }),
   );
   app.use(express.json({ limit: '20kb' }));

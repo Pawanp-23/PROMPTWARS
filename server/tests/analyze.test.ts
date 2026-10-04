@@ -78,3 +78,18 @@ describe('TtlCache', () => {
     expect(cache.get('c')).toBeUndefined();
   });
 });
+
+describe('bias tags', () => {
+  it('keeps a valid bias and drops an unknown one without failing the analysis', async () => {
+    const output = {
+      ...goodModelOutput,
+      findings: [
+        { ...goodModelOutput.findings[0], bias: 'social_proof' },
+        { ...goodModelOutput.findings[1], bias: 'astrology' },
+      ],
+    };
+    const result = await analyzeDecision(internshipRequest, fakeClient(output));
+    expect(result.findings[0].bias).toBe('social_proof');
+    expect(result.findings[1].bias).toBeUndefined();
+  });
+});

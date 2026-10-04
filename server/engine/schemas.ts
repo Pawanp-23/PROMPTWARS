@@ -1,5 +1,5 @@
 import { Type, type Schema } from '@google/genai';
-import { AREAS, FINDING_TYPES } from '../../shared/areas.js';
+import { AREAS, BIASES, FINDING_TYPES } from '../../shared/areas.js';
 
 /** Structured-output schema for the blind-spot analysis. */
 export const ANALYSIS_SCHEMA: Schema = {
@@ -28,6 +28,7 @@ export const ANALYSIS_SCHEMA: Schema = {
           area: { type: Type.STRING, enum: [...AREAS] },
           quote: { type: Type.STRING },
           quoteB: { type: Type.STRING },
+          bias: { type: Type.STRING, enum: [...BIASES] },
           insight: { type: Type.STRING },
           question: { type: Type.STRING },
         },

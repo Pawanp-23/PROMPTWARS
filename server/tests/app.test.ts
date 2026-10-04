@@ -68,3 +68,29 @@ describe('API', () => {
     expect(res.status).toBe(429);
   });
 });
+
+describe('performance and hardening headers', () => {
+  it('gzips JSON responses when the client accepts it', async () => {
+    const big = {
+      ...goodModelOutput,
+      findings: Array.from({ length: 7 }, (_, i) => ({
+        ...goodModelOutput.findings[0],
+        id: `f${i}`,
+        insight: 'The internship overlaps with a full semester. '.repeat(20),
+      })),
+    };
+    const res = await request(createApp({ client: fakeClient(big) }))
+      .post('/api/analyze')
+      .set('Accept-Encoding', 'gzip')
+      .send(internshipRequest);
+    expect(res.headers['content-encoding']).toBe('gzip');
+  });
+
+  it('restricts powerful browser features to the microphone on our own origin', async () => {
+    const res = await request(createApp({ client: fakeClient(goodModelOutput) })).get(
+      '/api/health',
+    );
+    expect(res.headers['permissions-policy']).toContain('microphone=(self)');
+    expect(res.headers['permissions-policy']).toContain('camera=()');
+  });
+});

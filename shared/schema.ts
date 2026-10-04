@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AREAS, FINDING_TYPES, REFLECTION_STATUSES } from './areas.js';
+import { AREAS, BIASES, FINDING_TYPES, REFLECTION_STATUSES } from './areas.js';
 
 const text = (min: number, max: number) => z.string().trim().min(min).max(max);
 
@@ -31,6 +31,8 @@ export const findingSchema = z.object({
   area: z.enum(AREAS),
   quote: z.string().optional(),
   quoteB: z.string().optional(),
+  // An unknown or empty bias label is dropped rather than failing the whole analysis.
+  bias: z.enum(BIASES).optional().catch(undefined),
   insight: z.string(),
   question: z.string(),
 });

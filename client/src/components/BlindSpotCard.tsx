@@ -1,4 +1,9 @@
-import { AREA_LABELS, FINDING_LABELS, type ReflectionStatus } from '../../../shared/areas';
+import {
+  AREA_LABELS,
+  BIAS_LABELS,
+  FINDING_LABELS,
+  type ReflectionStatus,
+} from '../../../shared/areas';
 import type { Finding } from '../../../shared/schema';
 
 export interface CardState {
@@ -30,6 +35,11 @@ export function BlindSpotCard({ index, finding, state, onChange }: Props) {
       <header className="spot-meta">
         <span className="mono">{String(index + 1).padStart(2, '0')}</span>
         <span className={`tag tag-${finding.type}`}>{FINDING_LABELS[finding.type]}</span>
+        {finding.bias && (
+          <span className="tag tag-bias" title="A common thinking pattern, not a judgement">
+            {BIAS_LABELS[finding.bias]}
+          </span>
+        )}
         <span className="mono muted">{AREA_LABELS[finding.area]}</span>
       </header>
 

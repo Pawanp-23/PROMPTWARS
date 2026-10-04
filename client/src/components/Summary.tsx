@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AREA_LABELS } from '../../../shared/areas';
 import type { Coverage, Reflection } from '../../../shared/schema';
 import { ShadowMap } from './ShadowMap';
@@ -37,6 +37,8 @@ export function summaryText({
 export function Summary(props: Props) {
   const { decision, before, after, reflections, onRestart } = props;
   const [copied, setCopied] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => headingRef.current?.focus(), []);
   const open = reflections.filter((r) => r.status === 'unknown');
   const considered = reflections.filter((r) => r.status === 'considered');
   const setAside = reflections.filter((r) => r.status === 'not_relevant');
@@ -49,7 +51,7 @@ export function Summary(props: Props) {
   return (
     <section className="panel summary" aria-labelledby="summary-title">
       <p className="eyebrow">03 · Reasoning summary</p>
-      <h2 id="summary-title" tabIndex={-1}>
+      <h2 id="summary-title" ref={headingRef} tabIndex={-1}>
         Your decision, your call
       </h2>
       <p className="lead">{decision}</p>
@@ -104,3 +106,5 @@ export function Summary(props: Props) {
     </section>
   );
 }
+
+export default Summary;

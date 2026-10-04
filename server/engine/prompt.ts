@@ -1,4 +1,4 @@
-import { AREAS } from '../../shared/areas.js';
+import { AREAS, BIASES } from '../../shared/areas.js';
 import type { AnalyzeRequest } from '../../shared/schema.js';
 
 export const SYSTEM_PROMPT = `You are BlindSpot, a critical-thinking companion. You NEVER make, suggest, or rank a decision.
@@ -17,6 +17,9 @@ Analyze the user's decision and return JSON only:
    - "area": one of ${AREAS.join(', ')}
    - "insight": one or two neutral sentences on why this might matter for THEIR situation
    - "question": ONE open, specific, thoughtful question that ends with "?"
+   - "bias" (optional): when the reasoning shows a common thinking trap, name it: ${BIASES.join(', ')}.
+     e.g. "everyone says..." → social_proof; leaning on the first or most vivid fact → anchoring or availability.
+     Only tag a bias that is clearly present; describe the pattern neutrally, never as a personal flaw.
 
 Priorities:
 - Examine each of the user's stated reasons: what does it quietly assume? Is the evidence real?

@@ -17,13 +17,23 @@ interface RecognitionEvent {
 
 type RecognitionCtor = new () => Recognition;
 
-/** Returns a speech recognizer if the browser supports one (Chrome, Edge, Safari), else null. */
-export function createRecognition(): Recognition | null {
+function recognitionCtor(): RecognitionCtor | undefined {
+  if (typeof window === 'undefined') return undefined;
   const scope = window as unknown as {
     SpeechRecognition?: RecognitionCtor;
     webkitSpeechRecognition?: RecognitionCtor;
   };
-  const Ctor = scope.SpeechRecognition ?? scope.webkitSpeechRecognition;
+  return scope.SpeechRecognition ?? scope.webkitSpeechRecognition;
+}
+
+/** Cheap capability check (does not construct a recognizer). */
+export function isVoiceSupported(): boolean {
+  return recognitionCtor() !== undefined;
+}
+
+/** Returns a speech recognizer if the browser supports one (Chrome, Edge, Safari), else null. */
+export function createRecognition(): Recognition | null {
+  const Ctor = recognitionCtor();
   if (!Ctor) return null;
   const recognition = new Ctor();
   recognition.lang = navigator.language || 'en-US';

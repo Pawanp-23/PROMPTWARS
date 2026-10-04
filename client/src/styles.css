@@ -433,7 +433,7 @@ main.shell {
 
 .kpis {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   margin: var(--s4) 0 0;
   border: 1px solid var(--hairline);
   border-radius: var(--r-lg);
@@ -874,6 +874,12 @@ mark {
   color: var(--conflict);
 }
 
+.tag-bias {
+  border-style: dotted;
+  color: var(--amber-ink);
+  border-color: var(--amber);
+}
+
 .tag-overlooked {
   background: var(--ink);
   border-color: var(--ink);
@@ -1054,7 +1060,7 @@ fieldset {
     grid-template-columns: 1fr;
   }
   .kpis {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
   .kpi + .kpi {
     border-left: 0;

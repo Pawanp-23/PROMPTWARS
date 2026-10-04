@@ -71,7 +71,7 @@ describe('App', () => {
     expect(screen.getAllByText(/25% of areas examined/).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: 'See my reasoning summary' }));
-    expect(screen.getByRole('heading', { name: 'Your decision, your call' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Your decision, your call' })).toBeTruthy();
     expect(screen.getByText(/BlindSpot doesn’t decide\./)).toBeTruthy();
     expect(container.textContent).not.toMatch(/you should|I recommend/i);
   });

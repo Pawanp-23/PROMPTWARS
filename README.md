@@ -27,8 +27,10 @@ BlindSpot reads your decision and your reasons for leaning one way, then shows y
    - **Overlooked**: an important area you didn't consider
    - **Assumption**: an unstated belief your reasoning depends on, quoted from your words
    - **Conflict**: two parts of your own reasoning that pull against each other
-3. **One thoughtful question per card.** You mark each one _considered_, _need to find out_, or _not relevant_, and the map lights up as you go. **Re-scan** looks for what's still unexamined.
-4. **Reasoning Summary**: before/after map, open questions, what you examined. No verdict. _"BlindSpot doesn't decide. You do."_
+3. **Thinking traps.** When a finding reflects a common cognitive bias it is tagged neutrally: e.g. _"Everyone says internships matter"_ → **Bandwagon effect**; leaning on the first or most vivid fact → **Anchoring / Availability**. This is the "decide on what we notice first" problem, named.
+4. **One thoughtful question per card.** You mark each one _considered_, _need to find out_, or _not relevant_, and the map lights up as you go. **Re-scan** looks for what's still unexamined.
+5. **Exploration score** (0–100) on the dashboard: 60% area coverage + 40% questions reflected on, labelled _"how thoroughly explored, not whether it's right"_.
+6. **Reasoning Summary**: before/after map, open questions, what you examined. No verdict. _"BlindSpot doesn't decide. You do."_
 
 ## Problem statement → feature map
 
@@ -72,11 +74,11 @@ flowchart LR
 ## Quality, security, accessibility
 
 - **Code quality:** TypeScript strict on client and server, one shared contract (`shared/`), small pure functions, ESLint + Prettier, CI on every push.
-- **Testing:** 76 Vitest tests covering the guard, coverage, quote grounding, schema validation, cache, model fallback, the API (security headers, 400/413/429/502), and the voice-intake rules, and the full UI flow (including a no-microphone path) with **axe-core** accessibility checks. Run `npm test`.
+- **Testing:** 91 Vitest tests covering the guard, coverage, quote grounding, schema validation, cache, model fallback, the API (security headers, 400/413/429/502), and the voice-intake rules, and the full UI flow (including a no-microphone path) with **axe-core** accessibility checks. Run `npm test`.
 - **Security:** API key server-side only; zod input validation with length limits; 20 KB body limit; per-IP rate limiting; Helmet with strict CSP; user text sent to the model as JSON data with an explicit prompt-injection rule; errors never leak internals. See [SECURITY.md](SECURITY.md).
 - **Accessibility:** semantic landmarks, skip link, labelled fields, keyboard-only flow, focus moved to new results, `aria-live` status and alerts, highlights carry **text labels** (not colour alone), the map has a full text list alternative, light/dark themes, `prefers-reduced-motion`.
 - **Design:** editorial paper-and-ink system (design tokens, one amber accent, serif display + mono labels), light/dark themes, subtle Motion reveals that respect `prefers-reduced-motion`.
-- **Efficiency:** one model call per scan, in-memory TTL cache for repeated inputs, coverage recomputed instantly in the browser with the same shared function, hand-drawn SVG map (no chart library), ~100 KB gzipped JS, immutable cached assets.
+- **Efficiency:** gzip compression; dashboard and summary are lazy-loaded (app code ≈ 8 KB gzipped, React/Motion in separately cached vendor chunks); immutable asset caching; `maxOutputTokens` caps; one model call per scan, in-memory TTL cache for repeated inputs, coverage recomputed instantly in the browser with the same shared function, hand-drawn SVG map (no chart library), ~100 KB gzipped JS, immutable cached assets.
 
 ## Run locally
 
@@ -104,7 +106,32 @@ Checks: `npm run lint`, `npm run typecheck`, `npm test`.
 ## Project structure
 
 ```
-shared/   areas, zod schemas, coverage (used by client and server)
-server/   Express app, /api/analyze, engine (prompt, gemini, guard, quotes, cache)
-client/   React UI (form, spotlight, shadow map, cards, summary)
+shared/                    contracts used by both sides (no duplication)
+  areas.ts                 8 life areas, finding types, cognitive biases, labels
+  schema.ts                zod schemas + types for every API request/response
+  coverage.ts              Light & Shadow coverage + exploration score (pure, tested)
+  voice.ts                 greeting, closing line, instant fillers
+server/
+  index.ts                 entry: env → config → app.listen, warms the voice cache
+  config.ts                validated configuration (API key, model fallback lists, port)
+  app.ts                   Express app: helmet/CSP, permissions policy, gzip, rate limits
+  routes/                  analyze · intake · speak (thin: validate → engine → respond)
+  engine/
+    analyze.ts             pipeline: model → schema check → quote grounding → guard → coverage
+    intake.ts              voice interviewer turn logic (turn limit, no-advice reply guard)
+    prompt.ts              system prompt + user prompt builder (input as JSON data)
+    guard.ts               recommendation guard: enforces "never decide" in code
+    quotes.ts              drops any quote the user did not actually write
+    gemini.ts              Gemini client with ordered model fallback + backoff pass
+    tts.ts                 Gemini TTS: cached WAV + streamed PCM
+    schemas.ts             Gemini structured-output schemas
+    cache.ts               TTL cache for repeated requests
+  tests/                   API, engine and config tests (supertest + vitest)
+client/src/
+  App.tsx                  shell: layout, live regions, lazy-loaded stages
+  hooks/useBlindSpot.ts    all session state (views stay presentational)
+  views/                   LandingView · DashboardView (code-split)
+  components/              VoiceAgent, DecisionForm, ShadowMap, BlindSpotCard, Kpis, Summary…
+  lib/                     api client, speech (Web Speech + Web Audio), highlighting, sample
+  tests/                   UI flow, voice (no-mic path), axe accessibility, pure helpers
 ```

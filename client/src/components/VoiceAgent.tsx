@@ -5,6 +5,7 @@ import { CLOSING_LINE, FILLERS, OPENING_LINE } from '../../../shared/voice';
 import { intake } from '../lib/api';
 import {
   createRecognition,
+  isVoiceSupported,
   preloadSpeech,
   speak,
   stopSpeaking,
@@ -46,7 +47,7 @@ export function VoiceAgent({ onComplete }: Props) {
   const [error, setError] = useState('');
   const recognitionRef = useRef<Recognition | null>(null);
   const turnsRef = useRef<IntakeTurn[]>([]);
-  const voiceSupported = typeof window !== 'undefined' && createRecognition() !== null;
+  const [voiceSupported] = useState(isVoiceSupported);
 
   useEffect(
     () => () => {

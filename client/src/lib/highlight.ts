@@ -1,3 +1,5 @@
+import type { AnalyzeResponse } from '../../../shared/schema';
+
 export type MarkKind = 'focus' | 'assumption' | 'conflict';
 
 export interface Mark {
@@ -43,4 +45,15 @@ export function parseOptions(raw: string): string[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .slice(0, 5);
+}
+
+/** Quotes to highlight in the user's text: what they focused on, assumptions, and conflicts. */
+export function marksFor(result: Pick<AnalyzeResponse, 'focus' | 'findings'>): Mark[] {
+  const marks: Mark[] = result.focus.map((f) => ({ quote: f.quote, kind: 'focus' }));
+  for (const finding of result.findings) {
+    if (finding.type === 'overlooked') continue;
+    if (finding.quote) marks.push({ quote: finding.quote, kind: finding.type });
+    if (finding.quoteB) marks.push({ quote: finding.quoteB, kind: finding.type });
+  }
+  return marks;
 }
