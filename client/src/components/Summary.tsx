@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AREA_LABELS } from '../../../shared/areas';
 import type { Coverage, Reflection } from '../../../shared/schema';
+import { saveSummary } from '../lib/api';
 import { ShadowMap } from './ShadowMap';
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
   after: Coverage;
   reflections: Reflection[];
   onRestart: () => void;
+  /** Opened from a shared link: hide the save button. */
+  shared?: boolean;
 }
 
 /** Builds a plain-text copy of the summary for the clipboard. */
@@ -17,7 +20,7 @@ export function summaryText({
   before,
   after,
   reflections,
-}: Omit<Props, 'onRestart'>): string {
+}: Pick<Props, 'decision' | 'before' | 'after' | 'reflections'>): string {
   const lines = [
     `Decision: ${decision}`,
     `Areas examined: ${before.percent}% → ${after.percent}%`,
@@ -35,8 +38,10 @@ export function summaryText({
 
 /** Step 5 — the reasoning summary. Deliberately contains no verdict. */
 export function Summary(props: Props) {
-  const { decision, before, after, reflections, onRestart } = props;
+  const { decision, before, after, reflections, onRestart, shared = false } = props;
   const [copied, setCopied] = useState(false);
+  const [link, setLink] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'error'>('idle');
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => headingRef.current?.focus(), []);
   const open = reflections.filter((r) => r.status === 'unknown');
@@ -48,9 +53,21 @@ export function Summary(props: Props) {
     setCopied(true);
   };
 
+  /** Saves the summary (Firestore) and shows a link to revisit or share it. */
+  const save = async () => {
+    setSaveState('saving');
+    try {
+      const { id } = await saveSummary({ decision, before, after, reflections });
+      setLink(`${window.location.origin}/?s=${id}`);
+      setSaveState('idle');
+    } catch {
+      setSaveState('error');
+    }
+  };
+
   return (
     <section className="panel summary" aria-labelledby="summary-title">
-      <p className="eyebrow">03 · Reasoning summary</p>
+      <p className="eyebrow">{shared ? 'Shared reasoning summary' : '03 · Reasoning summary'}</p>
       <h2 id="summary-title" ref={headingRef} tabIndex={-1}>
         Your decision, your call
       </h2>
@@ -96,10 +113,30 @@ export function Summary(props: Props) {
         <button type="button" className="btn primary" onClick={copy}>
           {copied ? 'Copied!' : 'Copy summary'}
         </button>
+        {!shared && !link && (
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={save}
+            disabled={saveState === 'saving'}
+          >
+            {saveState === 'saving' ? 'Saving…' : 'Save & get a share link'}
+          </button>
+        )}
         <button type="button" className="btn ghost" onClick={onRestart}>
-          Examine another decision
+          {shared ? 'Examine my own decision' : 'Examine another decision'}
         </button>
       </div>
+      {link && (
+        <p className="share-link" role="status">
+          <span className="mono muted">Saved · revisit or share</span> <a href={link}>{link}</a>
+        </p>
+      )}
+      {saveState === 'error' && (
+        <p className="voice-error" role="alert">
+          Couldn’t save right now. Copy the summary instead.
+        </p>
+      )}
       <p className="visually-hidden" aria-live="polite">
         {copied ? 'Summary copied to clipboard' : ''}
       </p>

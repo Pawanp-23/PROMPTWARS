@@ -25,6 +25,7 @@ describe('loadConfig', () => {
       textModels: DEFAULT_TEXT_MODELS,
       voiceModels: DEFAULT_VOICE_MODELS,
       port: 8080,
+      firestoreServiceAccount: undefined,
     });
   });
 

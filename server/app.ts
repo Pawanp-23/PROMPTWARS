@@ -7,19 +7,29 @@ import type { ModelClient } from './engine/analyze.js';
 import { createAnalyzeRouter } from './routes/analyze.js';
 import { createIntakeRouter } from './routes/intake.js';
 import { createSpeakRouter } from './routes/speak.js';
+import { createSummariesRouter } from './routes/summaries.js';
+import { createMemoryStore, type SummaryStore } from './engine/store.js';
 import type { SpeechClient } from './engine/tts.js';
 
 export interface AppOptions {
   client: ModelClient;
   /** Text-to-speech for the voice agent; when omitted the browser's own voice is used. */
   speech?: SpeechClient;
+  /** Where shared reasoning summaries are saved (Firestore in production). */
+  store?: SummaryStore;
   /** Directory containing the built client; omitted in tests. */
   staticDir?: string;
   rateLimitPerMinute?: number;
 }
 
 /** Builds the Express app. Kept separate from `listen` so it can be tested in-process. */
-export function createApp({ client, speech, staticDir, rateLimitPerMinute = 20 }: AppOptions) {
+export function createApp({
+  client,
+  speech,
+  store = createMemoryStore(),
+  staticDir,
+  rateLimitPerMinute = 20,
+}: AppOptions) {
   const app = express();
 
   app.disable('x-powered-by');
@@ -69,6 +79,7 @@ export function createApp({ client, speech, staticDir, rateLimitPerMinute = 20 }
   app.use('/api/analyze', limiter(), createAnalyzeRouter(client));
   app.use('/api/intake', limiter(), createIntakeRouter(client));
   if (speech) app.use('/api/speak', limiter(), createSpeakRouter(speech));
+  app.use('/api/summaries', limiter(), createSummariesRouter(store));
 
   if (staticDir) {
     // Hashed assets are immutable; index.html must always be fresh so new deploys show up.

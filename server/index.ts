@@ -4,6 +4,7 @@ import { createApp } from './app.js';
 import { loadConfig, type Config } from './config.js';
 import { createGeminiClient } from './engine/gemini.js';
 import { createGeminiSpeech } from './engine/tts.js';
+import { createSummaryStore } from './engine/store.js';
 
 try {
   process.loadEnvFile();
@@ -26,6 +27,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const app = createApp({
   client: createGeminiClient(config.apiKey, config.textModels),
   speech,
+  store: createSummaryStore(config.firestoreServiceAccount),
   staticDir: path.resolve(here, '../client'),
 });
 

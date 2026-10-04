@@ -1030,6 +1030,15 @@ fieldset {
   gap: var(--s2);
 }
 
+.share-link {
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.share-link a {
+  color: var(--ink);
+}
+
 .verdict {
   margin: var(--s5) 0 var(--s2);
   padding: var(--s5);

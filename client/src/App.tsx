@@ -3,6 +3,7 @@ import { domAnimation, LazyMotion, MotionConfig } from 'motion/react';
 import { Reveal } from './components/Reveal';
 import { TopBar } from './components/TopBar';
 import { useBlindSpot } from './hooks/useBlindSpot';
+import { useSharedSummary } from './hooks/useSharedSummary';
 import { LandingView } from './views/LandingView';
 
 // Only needed after an analysis, so they are split out of the initial bundle.
@@ -12,6 +13,8 @@ const Summary = lazy(() => import('./components/Summary'));
 /** App shell: layout, live regions, and the three stages of a BlindSpot session. */
 export function App() {
   const session = useBlindSpot();
+  const shared = useSharedSummary();
+  const leaveShared = () => window.location.assign('/');
   const { stage, draft, result, liveCoverage, initialCoverage, busy, error } = session;
   const userText = [draft.reasons, draft.context].filter(Boolean).join('\n\n');
 
@@ -31,7 +34,24 @@ export function App() {
             {busy ? 'Analyzing your reasoning…' : ''}
           </p>
 
-          {stage === 'input' && (
+          {shared.status === 'loading' && (
+            <div className="panel skeleton" aria-busy="true" aria-label="Loading shared summary" />
+          )}
+          {shared.status === 'error' && (
+            <div className="panel" role="alert">
+              <p>{shared.message}</p>
+              <button type="button" className="btn ghost" onClick={leaveShared}>
+                Start a new decision
+              </button>
+            </div>
+          )}
+          {shared.status === 'ready' && (
+            <Suspense fallback={<div className="panel skeleton" aria-hidden="true" />}>
+              <Summary {...shared.summary} shared onRestart={leaveShared} />
+            </Suspense>
+          )}
+
+          {shared.status === 'none' && stage === 'input' && (
             <LandingView
               draft={draft}
               busy={busy}
@@ -42,7 +62,7 @@ export function App() {
           )}
 
           <Suspense fallback={<div className="panel skeleton" aria-hidden="true" />}>
-            {stage === 'review' && result && liveCoverage && (
+            {shared.status === 'none' && stage === 'review' && result && liveCoverage && (
               <DashboardView
                 decision={draft.decision}
                 userText={userText}
@@ -57,7 +77,7 @@ export function App() {
               />
             )}
 
-            {stage === 'summary' && liveCoverage && initialCoverage && (
+            {shared.status === 'none' && stage === 'summary' && liveCoverage && initialCoverage && (
               <Reveal>
                 <Summary
                   decision={draft.decision}

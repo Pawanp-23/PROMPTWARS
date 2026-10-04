@@ -16,6 +16,8 @@ export interface Config {
   textModels: string[];
   voiceModels: string[];
   port: number;
+  /** Google Cloud service-account JSON for Firestore; when absent an in-memory store is used. */
+  firestoreServiceAccount?: string;
 }
 
 /** Parses a comma-separated env value into a clean list, or returns the fallback. */
@@ -39,5 +41,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     textModels: parseList(env.GEMINI_MODELS, DEFAULT_TEXT_MODELS),
     voiceModels: parseList(env.GEMINI_TTS_MODELS, DEFAULT_VOICE_MODELS),
     port: Number.isInteger(port) && port > 0 ? port : 8080,
+    firestoreServiceAccount: env.FIRESTORE_SERVICE_ACCOUNT?.trim() || undefined,
   };
 }

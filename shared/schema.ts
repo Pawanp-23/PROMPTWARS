@@ -71,6 +71,25 @@ export type IntakeTurn = z.infer<typeof intakeTurnSchema>;
 export type IntakeRequest = z.infer<typeof intakeRequestSchema>;
 export type IntakeResponse = z.infer<typeof intakeOutputSchema>;
 
+const coverageSchema = z.object({
+  covered: z.array(z.enum(AREAS)).max(AREAS.length),
+  shadow: z.array(z.enum(AREAS)).max(AREAS.length),
+  percent: z.number().int().min(0).max(100),
+});
+
+/** A reasoning summary the user chose to save and share (POST /api/summaries). */
+export const savedSummarySchema = z.object({
+  decision: text(5, 300),
+  before: coverageSchema,
+  after: coverageSchema,
+  reflections: z.array(reflectionSchema).max(24),
+});
+
+/** Saved-summary ids are opaque and URL-safe; anything else is rejected before a lookup. */
+export const summaryIdSchema = z.string().regex(/^[A-Za-z0-9_-]{8,40}$/);
+
+export type SavedSummary = z.infer<typeof savedSummarySchema>;
+
 export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
 export type Reflection = z.infer<typeof reflectionSchema>;
 export type FocusItem = z.infer<typeof focusItemSchema>;

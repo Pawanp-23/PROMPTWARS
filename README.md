@@ -30,7 +30,8 @@ BlindSpot reads your decision and your reasons for leaning one way, then shows y
 3. **Thinking traps.** When a finding reflects a common cognitive bias it is tagged neutrally: e.g. _"Everyone says internships matter"_ → **Bandwagon effect**; leaning on the first or most vivid fact → **Anchoring / Availability**. This is the "decide on what we notice first" problem, named.
 4. **One thoughtful question per card.** You mark each one _considered_, _need to find out_, or _not relevant_, and the map lights up as you go. **Re-scan** looks for what's still unexamined.
 5. **Exploration score** (0–100) on the dashboard: 60% area coverage + 40% questions reflected on, labelled _"how thoroughly explored, not whether it's right"_.
-6. **Reasoning Summary**: before/after map, open questions, what you examined. No verdict. _"BlindSpot doesn't decide. You do."_
+6. **Save & share** the reasoning summary (Google Cloud Firestore) to revisit it later or show a mentor before deciding.
+7. **Reasoning Summary**: before/after map, open questions, what you examined. No verdict. _"BlindSpot doesn't decide. You do."_
 
 ## Problem statement → feature map
 
@@ -74,7 +75,7 @@ flowchart LR
 ## Quality, security, accessibility
 
 - **Code quality:** TypeScript strict on client and server, one shared contract (`shared/`), small pure functions, ESLint + Prettier, CI on every push.
-- **Testing:** 91 Vitest tests covering the guard, coverage, quote grounding, schema validation, cache, model fallback, the API (security headers, 400/413/429/502), and the voice-intake rules, and the full UI flow (including a no-microphone path) with **axe-core** accessibility checks. Run `npm test`.
+- **Testing:** 104 Vitest tests covering the guard, coverage, quote grounding, schema validation, cache, model fallback, the API (security headers, 400/413/429/502), and the voice-intake rules, and the full UI flow (including a no-microphone path) with **axe-core** accessibility checks. Run `npm test`.
 - **Security:** API key server-side only; zod input validation with length limits; 20 KB body limit; per-IP rate limiting; Helmet with strict CSP; user text sent to the model as JSON data with an explicit prompt-injection rule; errors never leak internals. See [SECURITY.md](SECURITY.md).
 - **Accessibility:** semantic landmarks, skip link, labelled fields, keyboard-only flow, focus moved to new results, `aria-live` status and alerts, highlights carry **text labels** (not colour alone), the map has a full text list alternative, light/dark themes, `prefers-reduced-motion`.
 - **Design:** editorial paper-and-ink system (design tokens, one amber accent, serif display + mono labels), light/dark themes, subtle Motion reveals that respect `prefers-reduced-motion`.
@@ -93,14 +94,14 @@ Checks: `npm run lint`, `npm run typecheck`, `npm test`.
 
 ## Deploy
 
-- **Render:** `render.yaml` blueprint. Set `GEMINI_API_KEY` in the dashboard.
+- **Render:** Docker deploy. Set `GEMINI_API_KEY` (and optionally `FIRESTORE_SERVICE_ACCOUNT`) in the dashboard.
 - **Cloud Run:** `gcloud run deploy blindspot --source . --set-env-vars GEMINI_API_KEY=...`
 
 ## Assumptions
 
 - The user has already formed a leaning; examining _why_ is where blind spots show up.
 - Eight life areas (academics, money, learning, long-term future, health/time, people affected, risk/reversibility, alternatives) are broad enough for most personal and career decisions.
-- No data is stored: sessions live in the browser, and nothing is persisted server-side.
+- Nothing is stored unless the user explicitly clicks **Save & get a share link**; saved summaries contain only the decision, coverage and reflections, behind an unguessable id, and expire after 30 days.
 - BlindSpot is a thinking aid, not professional (medical, legal, financial) advice.
 
 ## Project structure
