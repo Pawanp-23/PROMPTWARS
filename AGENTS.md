@@ -20,7 +20,7 @@ _Last updated: 2026-10-04 · Status: **LIVE — ready to submit**_
 | Google services      | **Gemini API** (structured JSON output, model fallback `gemini-3.5-flash-lite → 3.1-flash-lite → 3.5-flash → 2.5-flash-lite`) · Cloud Run-ready Dockerfile                                                        |
 | GitHub repo (public) | https://github.com/Pawanp-23/Pawan_patil_PROMPTWARS                                                                                                                                                               |
 | Live URL             | TBD                                                                                                                                                                                                               |
-| Attempts used        | 0 / 2 — first submission returns a per-criterion score to use as feedback; **only the latest submission counts**                                                                                                  |
+| Attempts used        | **1 / 2**. Attempt 1: **96.16** (CQ 88, Sec 99, Eff 100, Test 96, A11y 98, PSA 99), rank #8. Only the latest submission counts                                                                                    |
 
 ---
 
