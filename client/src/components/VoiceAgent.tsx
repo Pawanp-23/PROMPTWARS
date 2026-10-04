@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { m } from 'motion/react';
 import type { IntakeResponse, IntakeTurn } from '../../../shared/schema';
+import { OPENING_LINE } from '../../../shared/voice';
 import { intake } from '../lib/api';
-import { createRecognition, speak, stopSpeaking, type Recognition } from '../lib/speech';
-
-export const OPENING_LINE = 'Hi, I’m BlindSpot. What decision are you weighing right now?';
+import {
+  createRecognition,
+  preloadSpeech,
+  speak,
+  stopSpeaking,
+  type Recognition,
+} from '../lib/speech';
 
 type Phase = 'idle' | 'speaking' | 'listening' | 'thinking' | 'done';
 
@@ -85,6 +90,7 @@ export function VoiceAgent({ onComplete }: Props) {
   };
 
   const say = async (text: string, then: () => void) => {
+    // The caption shows the line immediately; audio follows as soon as it is ready.
     setPhase('speaking');
     await speak(text);
     then();
@@ -152,6 +158,8 @@ export function VoiceAgent({ onComplete }: Props) {
           type="button"
           className="orb-button"
           onClick={active ? stop : start}
+          onPointerEnter={() => preloadSpeech(OPENING_LINE)}
+          onFocus={() => preloadSpeech(OPENING_LINE)}
           aria-pressed={active}
           aria-label={active ? 'Stop voice conversation' : 'Start voice conversation'}
         >

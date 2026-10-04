@@ -14,7 +14,7 @@ People decide based on the information that is **most visible** to them. They **
 
 ## Talk it through: the voice intake
 
-The landing page opens with a **voice agent** (Cartesia-style orb). Tap the mic and BlindSpot interviews you in about a minute: what you're deciding, your options, the key details, and **why you're leaning that way**. It extracts those fields with Gemini (`/api/intake`) and opens the analysis automatically. It only asks; any reply that steers the decision is replaced in code, and the interview ends after 6 answers so no one gets stuck. No microphone? Type your answers in the same box, or use the form.
+The landing page opens with a **voice agent** (Cartesia-style orb). Tap the mic and BlindSpot interviews you in about a minute: what you're deciding, your options, the key details, and **why you're leaning that way**. It extracts those fields with Gemini (`/api/intake`) and opens the analysis automatically. It speaks with **Gemini native text-to-speech** (`/api/speak`, voice _Puck_) in an energetic, playful, lightly sarcastic tone (it teases the situation, never the person or an option), falling back to the best browser voice. It only asks; any reply that steers the decision is replaced in code, and the interview ends after 6 answers so no one gets stuck. No microphone? Type your answers in the same box, or use the form.
 
 ## The idea: Light & Shadow
 
@@ -72,7 +72,7 @@ flowchart LR
 ## Quality, security, accessibility
 
 - **Code quality:** TypeScript strict on client and server, one shared contract (`shared/`), small pure functions, ESLint + Prettier, CI on every push.
-- **Testing:** 65 Vitest tests covering the guard, coverage, quote grounding, schema validation, cache, model fallback, the API (security headers, 400/413/429/502), and the voice-intake rules, and the full UI flow (including a no-microphone path) with **axe-core** accessibility checks. Run `npm test`.
+- **Testing:** 71 Vitest tests covering the guard, coverage, quote grounding, schema validation, cache, model fallback, the API (security headers, 400/413/429/502), and the voice-intake rules, and the full UI flow (including a no-microphone path) with **axe-core** accessibility checks. Run `npm test`.
 - **Security:** API key server-side only; zod input validation with length limits; 20 KB body limit; per-IP rate limiting; Helmet with strict CSP; user text sent to the model as JSON data with an explicit prompt-injection rule; errors never leak internals. See [SECURITY.md](SECURITY.md).
 - **Accessibility:** semantic landmarks, skip link, labelled fields, keyboard-only flow, focus moved to new results, `aria-live` status and alerts, highlights carry **text labels** (not colour alone), the map has a full text list alternative, light/dark themes, `prefers-reduced-motion`.
 - **Design:** editorial paper-and-ink system (design tokens, one amber accent, serif display + mono labels), light/dark themes, subtle Motion reveals that respect `prefers-reduced-motion`.

@@ -20,25 +20,27 @@ describe('VoiceAgent', () => {
       context: 'Overlaps with my semester.',
       reasons: 'The stipend is good.',
     };
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(json({ reply: 'Thank you.', done: true, fields }))
-      .mockResolvedValueOnce(
-        json({
-          focus: [],
-          findings: [
-            {
-              id: 'f1',
-              type: 'overlooked',
-              area: 'academics',
-              insight: 'It overlaps with exams.',
-              question: 'How will exams fit around work?',
-            },
-          ],
-          coverage: { covered: [], shadow: [], percent: 0 },
-          blockedCount: 0,
-        }),
-      );
+    const analysis = {
+      focus: [],
+      findings: [
+        {
+          id: 'f1',
+          type: 'overlooked',
+          area: 'academics',
+          insight: 'It overlaps with exams.',
+          question: 'How will exams fit around work?',
+        },
+      ],
+      coverage: { covered: [], shadow: [], percent: 0 },
+      blockedCount: 0,
+    };
+    // Each endpoint answers for itself; /api/speak fails so the browser-voice fallback is used.
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === '/api/intake') return json({ reply: 'Thank you.', done: true, fields });
+      if (url === '/api/analyze') return json(analysis);
+      return new Response('{}', { status: 502 });
+    });
 
     render(<App />);
     expect(screen.getByRole('button', { name: 'Start voice conversation' })).toBeTruthy();
@@ -47,9 +49,11 @@ describe('VoiceAgent', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     expect(await screen.findByText('How will exams fit around work?')).toBeTruthy();
-    const intakeBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    const calls = fetchMock.mock.calls.map(([url, init]) => ({ url: String(url), init }));
+    const intakeCall = calls.find((call) => call.url === '/api/intake');
+    const intakeBody = JSON.parse(String(intakeCall?.init?.body));
     expect(intakeBody.history.at(-1)).toEqual({ role: 'user', text: 'I got an internship offer' });
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/analyze');
+    expect(calls.some((call) => call.url === '/api/analyze')).toBe(true);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(fields.decision);
   });
 });

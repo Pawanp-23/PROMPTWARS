@@ -5,16 +5,20 @@ import path from 'node:path';
 import type { ModelClient } from './engine/analyze.js';
 import { createAnalyzeRouter } from './routes/analyze.js';
 import { createIntakeRouter } from './routes/intake.js';
+import { createSpeakRouter } from './routes/speak.js';
+import type { SpeechClient } from './engine/tts.js';
 
 export interface AppOptions {
   client: ModelClient;
+  /** Text-to-speech for the voice agent; when omitted the browser's own voice is used. */
+  speech?: SpeechClient;
   /** Directory containing the built client; omitted in tests. */
   staticDir?: string;
   rateLimitPerMinute?: number;
 }
 
 /** Builds the Express app. Kept separate from `listen` so it can be tested in-process. */
-export function createApp({ client, staticDir, rateLimitPerMinute = 20 }: AppOptions) {
+export function createApp({ client, speech, staticDir, rateLimitPerMinute = 20 }: AppOptions) {
   const app = express();
 
   app.disable('x-powered-by');
@@ -29,6 +33,7 @@ export function createApp({ client, staticDir, rateLimitPerMinute = 20 }: AppOpt
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
           connectSrc: ["'self'"],
           imgSrc: ["'self'", 'data:'],
+          mediaSrc: ["'self'", 'blob:'],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],
         },
@@ -51,6 +56,7 @@ export function createApp({ client, staticDir, rateLimitPerMinute = 20 }: AppOpt
     });
   app.use('/api/analyze', limiter(), createAnalyzeRouter(client));
   app.use('/api/intake', limiter(), createIntakeRouter(client));
+  if (speech) app.use('/api/speak', limiter(), createSpeakRouter(speech));
 
   if (staticDir) {
     // Hashed assets are immutable; index.html must always be fresh so new deploys show up.

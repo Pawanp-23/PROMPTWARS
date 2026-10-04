@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
 import { createGeminiClient } from './engine/gemini.js';
+import { createGeminiSpeech } from './engine/tts.js';
 
 try {
   process.loadEnvFile();
@@ -23,11 +24,19 @@ const models = (
   .split(',')
   .map((name) => name.trim())
   .filter(Boolean);
+const voiceModels = (
+  process.env.GEMINI_TTS_MODELS ||
+  'gemini-3.8-flash-tts,gemini-3.8-flash-lite-tts,gemini-2.5-flash-preview-tts'
+)
+  .split(',')
+  .map((name) => name.trim())
+  .filter(Boolean);
 const port = Number(process.env.PORT) || 8080;
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const app = createApp({
   client: createGeminiClient(apiKey, models),
+  speech: createGeminiSpeech(apiKey, voiceModels),
   staticDir: path.resolve(here, '../client'),
 });
 
