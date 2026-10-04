@@ -1,43 +1,7 @@
-import { GoogleGenAI, Type, type Schema } from '@google/genai';
-import { AREAS, FINDING_TYPES } from '../../shared/areas.js';
+import { GoogleGenAI } from '@google/genai';
 import type { ModelClient } from './analyze.js';
 
 const TIMEOUT_MS = 45_000;
-
-/** Structured-output schema so Gemini returns exactly the JSON shape BlindSpot needs. */
-export const RESPONSE_SCHEMA: Schema = {
-  type: Type.OBJECT,
-  required: ['focus', 'findings'],
-  properties: {
-    focus: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        required: ['area', 'quote'],
-        properties: {
-          area: { type: Type.STRING, enum: [...AREAS] },
-          quote: { type: Type.STRING },
-        },
-      },
-    },
-    findings: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        required: ['id', 'type', 'area', 'insight', 'question'],
-        properties: {
-          id: { type: Type.STRING },
-          type: { type: Type.STRING, enum: [...FINDING_TYPES] },
-          area: { type: Type.STRING, enum: [...AREAS] },
-          quote: { type: Type.STRING },
-          quoteB: { type: Type.STRING },
-          insight: { type: Type.STRING },
-          question: { type: Type.STRING },
-        },
-      },
-    },
-  },
-};
 
 /** Errors worth trying another model for: overload, rate limit, or model unavailable. */
 export function isRetryable(err: unknown): boolean {
@@ -70,7 +34,7 @@ export function createGeminiClient(apiKey: string, models: string[]): ModelClien
   const ai = new GoogleGenAI({ apiKey });
 
   return {
-    generateJson(systemPrompt, userPrompt) {
+    generateJson(systemPrompt, userPrompt, schema) {
       return withFallback(models, async (model) => {
         const response = await ai.models.generateContent({
           model,
@@ -78,7 +42,7 @@ export function createGeminiClient(apiKey: string, models: string[]): ModelClien
           config: {
             systemInstruction: systemPrompt,
             responseMimeType: 'application/json',
-            responseSchema: RESPONSE_SCHEMA,
+            responseSchema: schema,
             temperature: 0.4,
             abortSignal: AbortSignal.timeout(TIMEOUT_MS),
           },

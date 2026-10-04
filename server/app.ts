@@ -4,6 +4,7 @@ import { rateLimit } from 'express-rate-limit';
 import path from 'node:path';
 import type { ModelClient } from './engine/analyze.js';
 import { createAnalyzeRouter } from './routes/analyze.js';
+import { createIntakeRouter } from './routes/intake.js';
 
 export interface AppOptions {
   client: ModelClient;
@@ -40,17 +41,16 @@ export function createApp({ client, staticDir, rateLimitPerMinute = 20 }: AppOpt
     res.json({ status: 'ok' });
   });
 
-  app.use(
-    '/api/analyze',
+  const limiter = () =>
     rateLimit({
       windowMs: 60_000,
       limit: rateLimitPerMinute,
       standardHeaders: 'draft-7',
       legacyHeaders: false,
       message: { error: 'Too many requests. Please wait a minute and try again.' },
-    }),
-    createAnalyzeRouter(client),
-  );
+    });
+  app.use('/api/analyze', limiter(), createAnalyzeRouter(client));
+  app.use('/api/intake', limiter(), createIntakeRouter(client));
 
   if (staticDir) {
     // Hashed assets are immutable; index.html must always be fresh so new deploys show up.

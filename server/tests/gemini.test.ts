@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isRetryable, RESPONSE_SCHEMA, withFallback } from '../engine/gemini.js';
+import { isRetryable, withFallback } from '../engine/gemini.js';
+import { ANALYSIS_SCHEMA as RESPONSE_SCHEMA } from '../engine/schemas.js';
 import { AREAS } from '../../shared/areas.js';
 
 const httpError = (status: number) => Object.assign(new Error(`HTTP ${status}`), { status });

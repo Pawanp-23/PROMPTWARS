@@ -5,10 +5,12 @@ import { guardFindings } from './guard.js';
 import { buildUserPrompt, sourceText, SYSTEM_PROMPT } from './prompt.js';
 import { groundFindings, groundFocus } from './quotes.js';
 import { TtlCache } from './cache.js';
+import { ANALYSIS_SCHEMA } from './schemas.js';
+import type { Schema } from '@google/genai';
 
 /** Anything that can turn a system + user prompt into raw JSON text (Gemini in production, a fake in tests). */
 export interface ModelClient {
-  generateJson(systemPrompt: string, userPrompt: string): Promise<string>;
+  generateJson(systemPrompt: string, userPrompt: string, schema: Schema): Promise<string>;
 }
 
 export class AnalysisError extends Error {}
@@ -28,7 +30,7 @@ export async function analyzeDecision(
   const cached = cache?.get(cacheKey);
   if (cached) return cached;
 
-  const raw = await client.generateJson(SYSTEM_PROMPT, buildUserPrompt(input));
+  const raw = await client.generateJson(SYSTEM_PROMPT, buildUserPrompt(input), ANALYSIS_SCHEMA);
 
   let json: unknown;
   try {

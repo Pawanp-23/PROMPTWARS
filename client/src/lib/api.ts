@@ -1,15 +1,16 @@
-import type { AnalyzeRequest, AnalyzeResponse } from '../../../shared/schema';
+import type {
+  AnalyzeRequest,
+  AnalyzeResponse,
+  IntakeRequest,
+  IntakeResponse,
+} from '../../../shared/schema';
 
-/** Calls the BlindSpot API. Throws an Error with a user-friendly message on failure. */
-export async function analyze(
-  request: AnalyzeRequest,
-  signal?: AbortSignal,
-): Promise<AnalyzeResponse> {
-  const response = await fetch('/api/analyze', {
+/** POSTs JSON to the BlindSpot API. Throws an Error with a user-friendly message on failure. */
+async function post<T>(path: string, payload: unknown): Promise<T> {
+  const response = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-    signal,
+    body: JSON.stringify(payload),
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -17,5 +18,9 @@ export async function analyze(
       typeof body.error === 'string' ? body.error : 'Something went wrong. Please try again.',
     );
   }
-  return body as AnalyzeResponse;
+  return body as T;
 }
+
+export const analyze = (request: AnalyzeRequest) => post<AnalyzeResponse>('/api/analyze', request);
+
+export const intake = (request: IntakeRequest) => post<IntakeResponse>('/api/intake', request);

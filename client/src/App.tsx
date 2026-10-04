@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { domAnimation, LazyMotion, MotionConfig } from 'motion/react';
 import { computeCoverage } from '../../shared/coverage';
-import type { AnalyzeRequest, AnalyzeResponse, Coverage, Reflection } from '../../shared/schema';
+import type {
+  AnalyzeRequest,
+  AnalyzeResponse,
+  Coverage,
+  IntakeResponse,
+  Reflection,
+} from '../../shared/schema';
 import { BlindSpotCard, type CardState } from './components/BlindSpotCard';
 import { DecisionForm } from './components/DecisionForm';
 import { HighlightedText } from './components/HighlightedText';
+import { Kpis } from './components/Kpis';
+import { VoiceAgent } from './components/VoiceAgent';
 import { Reveal } from './components/Reveal';
 import { ShadowMap } from './components/ShadowMap';
 import { Summary } from './components/Summary';
@@ -72,12 +80,12 @@ export function App() {
     [result, allReflections],
   );
 
-  const run = async (reflections: Reflection[]) => {
+  const run = async (reflections: Reflection[], source: DecisionDraft = draft) => {
     const request: AnalyzeRequest = {
-      decision: draft.decision.trim(),
-      options: parseOptions(draft.options),
-      context: draft.context.trim(),
-      reasons: draft.reasons.trim(),
+      decision: source.decision.trim(),
+      options: parseOptions(source.options),
+      context: source.context.trim(),
+      reasons: source.reasons.trim(),
       reflections: reflections.length ? reflections.slice(-12) : undefined,
     };
     if (!request.options.length) {
@@ -97,6 +105,22 @@ export function App() {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  /** Voice intake finished: fill the form and go straight to the analysis when it's complete. */
+  const handleVoiceComplete = (fields: IntakeResponse['fields']) => {
+    const next: DecisionDraft = {
+      decision: fields.decision,
+      options: fields.options.join('\n'),
+      context: fields.context,
+      reasons: fields.reasons,
+    };
+    setDraft(next);
+    if (next.decision.length >= 5 && next.options && next.reasons.length >= 5) {
+      void run([], next);
+    } else {
+      document.getElementById('write')?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -144,21 +168,6 @@ export function App() {
         </header>
 
         <main id="main" className="shell">
-          {stage === 'input' && (
-            <Reveal>
-              <section className="hero" aria-labelledby="hero-title">
-                <p className="eyebrow">The Blind Spot · A thinking companion</p>
-                <h1 id="hero-title">
-                  See what you’re <em>not</em> seeing.
-                </h1>
-                <p className="hero-sub">
-                  BlindSpot reads how you’re reasoning about a decision, shows what you’ve left in
-                  the shadows, and asks the questions you skipped. It never decides for you.
-                </p>
-              </section>
-            </Reveal>
-          )}
-
           <div role="alert" aria-live="assertive" className={error ? 'error' : 'visually-hidden'}>
             {error}
           </div>
@@ -167,14 +176,69 @@ export function App() {
           </p>
 
           {stage === 'input' && (
-            <Reveal delay={0.08}>
-              <DecisionForm
-                draft={draft}
-                onChange={setDraft}
-                onSubmit={() => run([])}
-                busy={busy}
-              />
-            </Reveal>
+            <>
+              <Reveal>
+                <section className="hero" aria-labelledby="hero-title">
+                  <p className="eyebrow">The Blind Spot · A thinking companion</p>
+                  <h1 id="hero-title">
+                    <span className="hero-quiet">Every decision has a blind spot.</span>
+                    <br />
+                    Find yours before you commit.
+                  </h1>
+                  <p className="hero-sub">
+                    Talk through a decision you’re facing. BlindSpot maps what your reasoning
+                    covers, surfaces the assumptions and conflicts you missed, and asks better
+                    questions. It never decides for you.
+                  </p>
+                </section>
+              </Reveal>
+
+              <Reveal delay={0.1}>
+                <VoiceAgent onComplete={handleVoiceComplete} />
+              </Reveal>
+
+              <section className="how" aria-labelledby="how-title">
+                <h2 id="how-title" className="section-title">
+                  Three steps. No verdicts.
+                </h2>
+                <ol className="how-grid">
+                  <li>
+                    <span className="mono muted">01</span>
+                    <h3>Spotlight</h3>
+                    <p>
+                      See which parts of life your reasoning lights up, and which sit in shadow.
+                    </p>
+                  </li>
+                  <li>
+                    <span className="mono muted">02</span>
+                    <h3>Examine</h3>
+                    <p>
+                      Work through overlooked factors, unstated assumptions and conflicts in your
+                      own words.
+                    </p>
+                  </li>
+                  <li>
+                    <span className="mono muted">03</span>
+                    <h3>Decide</h3>
+                    <p>
+                      Leave with a reasoning summary and open questions. The choice stays yours.
+                    </p>
+                  </li>
+                </ol>
+              </section>
+
+              <section id="write" aria-labelledby="write-title" className="write">
+                <h2 id="write-title" className="section-title">
+                  Prefer to write it down?
+                </h2>
+                <DecisionForm
+                  draft={draft}
+                  onChange={setDraft}
+                  onSubmit={() => run([])}
+                  busy={busy}
+                />
+              </section>
+            </>
           )}
 
           {stage === 'input' && busy && (
@@ -188,12 +252,24 @@ export function App() {
           {stage === 'review' && result && liveCoverage && (
             <>
               <Reveal>
+                <header className="dash-head">
+                  <p className="eyebrow">Analysis</p>
+                  <h1 id="dash-title" ref={headingRef} tabIndex={-1}>
+                    {draft.decision}
+                  </h1>
+                  <Kpis
+                    coverage={liveCoverage}
+                    findings={result.findings}
+                    reflected={currentReflections.length}
+                  />
+                </header>
+              </Reveal>
+
+              <Reveal delay={0.08}>
                 <section className="panel" aria-labelledby="spotlight-title">
                   <div className="panel-head">
                     <p className="eyebrow">01 · Spotlight</p>
-                    <h2 id="spotlight-title" ref={headingRef} tabIndex={-1}>
-                      Where your reasoning is focused
-                    </h2>
+                    <h2 id="spotlight-title">Where your reasoning is focused</h2>
                   </div>
                   <div className="spotlight">
                     <div>

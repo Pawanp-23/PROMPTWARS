@@ -41,6 +41,34 @@ export const modelOutputSchema = z.object({
   findings: z.array(findingSchema).max(10),
 });
 
+export const INTAKE_ROLES = ['agent', 'user'] as const;
+
+export const intakeTurnSchema = z.object({
+  role: z.enum(INTAKE_ROLES),
+  text: text(1, 600),
+});
+
+/** Validates the body of POST /api/intake: the conversation so far. */
+export const intakeRequestSchema = z.object({
+  history: z.array(intakeTurnSchema).min(1).max(14),
+});
+
+/** What the model must return for each intake turn. */
+export const intakeOutputSchema = z.object({
+  reply: z.string(),
+  done: z.boolean(),
+  fields: z.object({
+    decision: z.string(),
+    options: z.array(z.string()),
+    context: z.string(),
+    reasons: z.string(),
+  }),
+});
+
+export type IntakeTurn = z.infer<typeof intakeTurnSchema>;
+export type IntakeRequest = z.infer<typeof intakeRequestSchema>;
+export type IntakeResponse = z.infer<typeof intakeOutputSchema>;
+
 export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
 export type Reflection = z.infer<typeof reflectionSchema>;
 export type FocusItem = z.infer<typeof focusItemSchema>;
