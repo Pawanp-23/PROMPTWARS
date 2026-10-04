@@ -1,0 +1,53 @@
+import { describe, expect, it } from 'vitest';
+import { isRetryable, RESPONSE_SCHEMA, withFallback } from '../engine/gemini.js';
+import { AREAS } from '../../shared/areas.js';
+
+const httpError = (status: number) => Object.assign(new Error(`HTTP ${status}`), { status });
+
+describe('withFallback', () => {
+  it('returns the first model that succeeds after overload errors', async () => {
+    const tried: string[] = [];
+    const result = await withFallback(['a', 'b', 'c'], async (model) => {
+      tried.push(model);
+      if (model !== 'c') throw httpError(503);
+      return 'ok';
+    });
+    expect(result).toBe('ok');
+    expect(tried).toEqual(['a', 'b', 'c']);
+  });
+
+  it('stops immediately on non-retryable errors such as a bad key', async () => {
+    const tried: string[] = [];
+    await expect(
+      withFallback(['a', 'b'], async (model) => {
+        tried.push(model);
+        throw httpError(403);
+      }),
+    ).rejects.toThrow('HTTP 403');
+    expect(tried).toEqual(['a']);
+  });
+
+  it('throws the last error when every model is busy', async () => {
+    await expect(
+      withFallback(['a', 'b'], async () => Promise.reject(httpError(429))),
+    ).rejects.toThrow('HTTP 429');
+  });
+});
+
+describe('isRetryable', () => {
+  it.each([429, 500, 503, 404])('retries on %i', (status) => {
+    expect(isRetryable(httpError(status))).toBe(true);
+  });
+
+  it('does not retry on client errors or unknown failures', () => {
+    expect(isRetryable(httpError(400))).toBe(false);
+    expect(isRetryable(new Error('boom'))).toBe(false);
+  });
+});
+
+describe('RESPONSE_SCHEMA', () => {
+  it('constrains areas to the fixed list used for coverage', () => {
+    const findings = RESPONSE_SCHEMA.properties?.findings?.items;
+    expect(findings?.properties?.area?.enum).toEqual([...AREAS]);
+  });
+});
