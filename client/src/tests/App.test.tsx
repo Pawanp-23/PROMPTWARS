@@ -43,7 +43,7 @@ async function noViolations(container: HTMLElement) {
 describe('App', () => {
   it('renders an accessible form', async () => {
     const { container } = render(<App />);
-    expect(screen.getByRole('heading', { name: 'BlindSpot' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
     expect(screen.getByLabelText('What decision are you facing?')).toBeTruthy();
     await noViolations(container);
   });
@@ -63,14 +63,14 @@ describe('App', () => {
       '/api/analyze',
       expect.objectContaining({ method: 'POST' }),
     );
-    expect(screen.getByText(/1 AI suggestion was removed/)).toBeTruthy();
+    expect(screen.getByText(/removed for trying to decide/)).toBeTruthy();
     await noViolations(container);
 
     // Reflecting on an overlooked area lights it up immediately.
-    await user.click(screen.getAllByLabelText('✅ I’ve considered this')[0]);
+    await user.click(screen.getAllByLabelText('Considered')[0]);
     expect(screen.getAllByText(/25% of areas examined/).length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole('button', { name: '5. See my reasoning summary' }));
+    await user.click(screen.getByRole('button', { name: 'See my reasoning summary' }));
     expect(screen.getByRole('heading', { name: 'Your decision, your call' })).toBeTruthy();
     expect(screen.getByText(/BlindSpot doesn’t decide\./)).toBeTruthy();
     expect(container.textContent).not.toMatch(/you should|I recommend/i);

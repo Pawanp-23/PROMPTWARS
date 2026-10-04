@@ -37,8 +37,8 @@ export function ShadowMap({ coverage, title = 'Light & Shadow map' }: Props) {
   return (
     <figure className="shadow-map">
       <figcaption>
-        <strong>{title}</strong>
-        <span className="percent">{coverage.percent}% of areas examined</span>
+        <span className="eyebrow">{title}</span>
+        <span className="mono">{coverage.percent}% of areas examined</span>
       </figcaption>
       <div className="map-body">
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} aria-hidden="true">
@@ -56,7 +56,7 @@ export function ShadowMap({ coverage, title = 'Light & Shadow map' }: Props) {
         <ul className="area-list">
           {AREAS.map((area) => (
             <li key={area} className={lit.has(area) ? 'lit' : 'dark'}>
-              <span aria-hidden="true">{lit.has(area) ? '●' : '○'}</span> {AREA_LABELS[area]}
+              <span className="dot" aria-hidden="true" /> {AREA_LABELS[area]}
               <span className="visually-hidden">
                 {lit.has(area) ? ': examined' : ': in shadow, possible blind spot'}
               </span>

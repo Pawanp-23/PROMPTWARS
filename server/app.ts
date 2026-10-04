@@ -53,7 +53,18 @@ export function createApp({ client, staticDir, rateLimitPerMinute = 20 }: AppOpt
   );
 
   if (staticDir) {
-    app.use(express.static(staticDir, { maxAge: '1h', index: 'index.html' }));
+    // Hashed assets are immutable; index.html must always be fresh so new deploys show up.
+    app.use(
+      express.static(staticDir, {
+        index: 'index.html',
+        setHeaders: (res, filePath) => {
+          res.setHeader(
+            'Cache-Control',
+            filePath.endsWith('.html') ? 'no-cache' : 'public, max-age=31536000, immutable',
+          );
+        },
+      }),
+    );
     app.get('/{*splat}', (_req, res) => {
       res.sendFile(path.join(staticDir, 'index.html'));
     });

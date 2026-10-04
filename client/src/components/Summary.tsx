@@ -47,7 +47,8 @@ export function Summary(props: Props) {
   };
 
   return (
-    <section className="card summary" aria-labelledby="summary-title">
+    <section className="panel summary" aria-labelledby="summary-title">
+      <p className="eyebrow">03 · Reasoning summary</p>
       <h2 id="summary-title" tabIndex={-1}>
         Your decision, your call
       </h2>
@@ -58,7 +59,7 @@ export function Summary(props: Props) {
         <ShadowMap coverage={after} title="After" />
       </div>
 
-      <h3>Questions you still need to answer</h3>
+      <h3 className="eyebrow">Questions you still need to answer</h3>
       {open.length ? (
         <ul>
           {open.map((r) => (
@@ -69,7 +70,7 @@ export function Summary(props: Props) {
         <p className="muted">None marked. Nice work.</p>
       )}
 
-      <h3>What you examined</h3>
+      <h3 className="eyebrow">What you examined</h3>
       <ul>
         {considered.map((r) => (
           <li key={r.findingId + r.question}>

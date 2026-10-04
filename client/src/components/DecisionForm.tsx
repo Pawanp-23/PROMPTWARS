@@ -19,16 +19,22 @@ export function DecisionForm({ draft, onChange, onSubmit, busy }: Props) {
   };
 
   return (
-    <form className="card form" onSubmit={handleSubmit} aria-describedby="form-help">
+    <form className="panel form" onSubmit={handleSubmit} aria-describedby="form-help">
       <div className="form-head">
-        <h2>1. Tell BlindSpot what you're deciding</h2>
-        <button type="button" className="btn ghost" onClick={() => onChange(INTERNSHIP_SAMPLE)}>
+        <div>
+          <p className="eyebrow">Your decision</p>
+          <p id="form-help" className="muted">
+            Be honest about why you’re leaning one way. That reasoning is what BlindSpot examines.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn ghost small"
+          onClick={() => onChange(INTERNSHIP_SAMPLE)}
+        >
           Try the internship example
         </button>
       </div>
-      <p id="form-help" className="muted">
-        Be honest about why you're leaning one way. That reasoning is what BlindSpot examines.
-      </p>
 
       <label htmlFor="decision">What decision are you facing?</label>
       <input
@@ -74,9 +80,12 @@ export function DecisionForm({ draft, onChange, onSubmit, busy }: Props) {
         placeholder="I'm mainly considering it because…"
       />
 
-      <button type="submit" className="btn primary" disabled={busy} aria-busy={busy}>
-        {busy ? 'Looking for blind spots…' : 'Find my blind spots'}
-      </button>
+      <div className="form-foot">
+        <p className="mono muted">One Gemini call · nothing stored</p>
+        <button type="submit" className="btn primary" disabled={busy} aria-busy={busy}>
+          {busy ? 'Looking for blind spots…' : 'Find my blind spots'}
+        </button>
+      </div>
     </form>
   );
 }

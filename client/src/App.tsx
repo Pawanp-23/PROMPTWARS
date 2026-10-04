@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { domAnimation, LazyMotion, MotionConfig } from 'motion/react';
 import { computeCoverage } from '../../shared/coverage';
 import type { AnalyzeRequest, AnalyzeResponse, Coverage, Reflection } from '../../shared/schema';
 import { BlindSpotCard, type CardState } from './components/BlindSpotCard';
 import { DecisionForm } from './components/DecisionForm';
 import { HighlightedText } from './components/HighlightedText';
+import { Reveal } from './components/Reveal';
 import { ShadowMap } from './components/ShadowMap';
 import { Summary } from './components/Summary';
 import { analyze } from './lib/api';
@@ -109,107 +111,173 @@ export function App() {
 
   const userText = [draft.reasons, draft.context].filter(Boolean).join('\n\n');
 
+  const steps: { id: Stage; label: string }[] = [
+    { id: 'input', label: 'Describe' },
+    { id: 'review', label: 'Examine' },
+    { id: 'summary', label: 'Decide' },
+  ];
+
   return (
-    <>
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      <header className="site-header">
-        <div className="brand">
-          <span className="logo" aria-hidden="true" />
-          <div>
-            <h1>BlindSpot</h1>
-            <p className="tagline">See what you’re not seeing.</p>
+    <LazyMotion features={domAnimation} strict>
+      <MotionConfig reducedMotion="user">
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
+        <header className="topbar">
+          <div className="topbar-inner">
+            <a className="wordmark" href="/" aria-label="BlindSpot home">
+              <span className="logo" aria-hidden="true" />
+              BlindSpot
+            </a>
+            <ol className="stepper" aria-label="Progress">
+              {steps.map((step, index) => (
+                <li
+                  key={step.id}
+                  className={step.id === stage ? 'active' : undefined}
+                  aria-current={step.id === stage ? 'step' : undefined}
+                >
+                  <span className="mono">0{index + 1}</span> {step.label}
+                </li>
+              ))}
+            </ol>
           </div>
-        </div>
-        <p className="promise">
-          An AI thinking companion that examines your reasoning.{' '}
-          <strong>It never decides for you.</strong>
-        </p>
-      </header>
+        </header>
 
-      <main id="main">
-        <div role="alert" aria-live="assertive" className={error ? 'error' : 'visually-hidden'}>
-          {error}
-        </div>
-        <p className="visually-hidden" aria-live="polite">
-          {busy ? 'Analyzing your reasoning…' : ''}
-        </p>
+        <main id="main" className="shell">
+          {stage === 'input' && (
+            <Reveal>
+              <section className="hero" aria-labelledby="hero-title">
+                <p className="eyebrow">The Blind Spot · A thinking companion</p>
+                <h1 id="hero-title">
+                  See what you’re <em>not</em> seeing.
+                </h1>
+                <p className="hero-sub">
+                  BlindSpot reads how you’re reasoning about a decision, shows what you’ve left in
+                  the shadows, and asks the questions you skipped. It never decides for you.
+                </p>
+              </section>
+            </Reveal>
+          )}
 
-        {stage === 'input' && (
-          <DecisionForm draft={draft} onChange={setDraft} onSubmit={() => run([])} busy={busy} />
-        )}
+          <div role="alert" aria-live="assertive" className={error ? 'error' : 'visually-hidden'}>
+            {error}
+          </div>
+          <p className="visually-hidden" aria-live="polite">
+            {busy ? 'Analyzing your reasoning…' : ''}
+          </p>
 
-        {stage === 'review' && result && liveCoverage && (
-          <>
-            <section className="card" aria-labelledby="spotlight-title">
-              <h2 id="spotlight-title" ref={headingRef} tabIndex={-1}>
-                2. Spotlight: where your reasoning is focused
-              </h2>
-              <div className="spotlight">
-                <div>
-                  <p className="legend">
-                    <span className="mark-focus">focus</span>
-                    <span className="mark-assumption">assumption</span>
-                    <span className="mark-conflict">conflict</span>
-                  </p>
-                  <HighlightedText text={userText} marks={marksFor(result)} />
-                </div>
-                <ShadowMap coverage={liveCoverage} />
-              </div>
-            </section>
+          {stage === 'input' && (
+            <Reveal delay={0.08}>
+              <DecisionForm
+                draft={draft}
+                onChange={setDraft}
+                onSubmit={() => run([])}
+                busy={busy}
+              />
+            </Reveal>
+          )}
 
-            <section aria-labelledby="spots-title">
-              <h2 id="spots-title" className="section-title">
-                3. Blind spots to examine
-              </h2>
-              <p className="muted">
-                Mark each one. Answers are yours; BlindSpot only asks.
-                {result.blockedCount > 0 &&
-                  ` (${result.blockedCount} AI suggestion${result.blockedCount > 1 ? 's were' : ' was'} removed because ${result.blockedCount > 1 ? 'they' : 'it'} tried to decide for you.)`}
-              </p>
-              <div className="spots">
-                {result.findings.map((finding) => (
-                  <BlindSpotCard
-                    key={finding.id}
-                    finding={finding}
-                    state={cards[finding.id] ?? { note: '' }}
-                    onChange={(state) => setCards((prev) => ({ ...prev, [finding.id]: state }))}
-                  />
-                ))}
-              </div>
-            </section>
-
-            <div className="actions sticky">
-              <button
-                type="button"
-                className="btn ghost"
-                disabled={busy || !currentReflections.length}
-                onClick={() => run(allReflections)}
-              >
-                {busy ? 'Re-scanning…' : '4. Re-scan with my reflections'}
-              </button>
-              <button type="button" className="btn primary" onClick={() => setStage('summary')}>
-                5. See my reasoning summary
-              </button>
+          {stage === 'input' && busy && (
+            <div className="panel skeleton" aria-hidden="true">
+              <span />
+              <span />
+              <span />
             </div>
-          </>
-        )}
+          )}
 
-        {stage === 'summary' && liveCoverage && initialCoverage && (
-          <Summary
-            decision={draft.decision}
-            before={initialCoverage}
-            after={liveCoverage}
-            reflections={allReflections}
-            onRestart={restart}
-          />
-        )}
-      </main>
+          {stage === 'review' && result && liveCoverage && (
+            <>
+              <Reveal>
+                <section className="panel" aria-labelledby="spotlight-title">
+                  <div className="panel-head">
+                    <p className="eyebrow">01 · Spotlight</p>
+                    <h2 id="spotlight-title" ref={headingRef} tabIndex={-1}>
+                      Where your reasoning is focused
+                    </h2>
+                  </div>
+                  <div className="spotlight">
+                    <div>
+                      <p className="legend" aria-label="Highlight legend">
+                        <span className="key key-focus">Focus</span>
+                        <span className="key key-assumption">Assumption</span>
+                        <span className="key key-conflict">Conflict</span>
+                      </p>
+                      <HighlightedText text={userText} marks={marksFor(result)} />
+                    </div>
+                    <ShadowMap coverage={liveCoverage} />
+                  </div>
+                </section>
+              </Reveal>
 
-      <footer className="site-footer">
-        Built for PromptWars · THE BLIND SPOT · Powered by Google Gemini
-      </footer>
-    </>
+              <section aria-labelledby="spots-title">
+                <div className="panel-head">
+                  <p className="eyebrow">02 · Examine</p>
+                  <h2 id="spots-title">Blind spots worth a second look</h2>
+                  <p className="muted">
+                    Mark each one as you think it through. The answers are yours; BlindSpot only
+                    asks.
+                  </p>
+                  {result.blockedCount > 0 && (
+                    <p className="guard-note">
+                      <span className="mono">Guard</span> {result.blockedCount} AI suggestion
+                      {result.blockedCount > 1 ? 's were' : ' was'} removed for trying to decide for
+                      you.
+                    </p>
+                  )}
+                </div>
+                <div className="spots">
+                  {result.findings.map((finding, index) => (
+                    <Reveal key={finding.id} delay={0.15 + index * 0.06} className="spot-cell">
+                      <BlindSpotCard
+                        index={index}
+                        finding={finding}
+                        state={cards[finding.id] ?? { note: '' }}
+                        onChange={(state) => setCards((prev) => ({ ...prev, [finding.id]: state }))}
+                      />
+                    </Reveal>
+                  ))}
+                </div>
+              </section>
+
+              <div className="actionbar">
+                <p className="mono muted">{liveCoverage.percent}% examined</p>
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    disabled={busy || !currentReflections.length}
+                    onClick={() => run(allReflections)}
+                  >
+                    {busy ? 'Re-scanning…' : 'Re-scan with my reflections'}
+                  </button>
+                  <button type="button" className="btn primary" onClick={() => setStage('summary')}>
+                    See my reasoning summary
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {stage === 'summary' && liveCoverage && initialCoverage && (
+            <Reveal>
+              <Summary
+                decision={draft.decision}
+                before={initialCoverage}
+                after={liveCoverage}
+                reflections={allReflections}
+                onRestart={restart}
+              />
+            </Reveal>
+          )}
+        </main>
+
+        <footer className="footer">
+          <div className="shell footer-inner">
+            <span>BlindSpot</span>
+            <span className="mono">PromptWars · The Blind Spot · Gemini</span>
+          </div>
+        </footer>
+      </MotionConfig>
+    </LazyMotion>
   );
 }

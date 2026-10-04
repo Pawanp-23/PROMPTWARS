@@ -71,7 +71,8 @@ flowchart LR
 - **Testing:** 55+ Vitest tests covering the guard, coverage, quote grounding, schema validation, cache, model fallback, the API (security headers, 400/413/429/502), and the full UI flow with **axe-core** accessibility checks. Run `npm test`.
 - **Security:** API key server-side only; zod input validation with length limits; 20 KB body limit; per-IP rate limiting; Helmet with strict CSP; user text sent to the model as JSON data with an explicit prompt-injection rule; errors never leak internals. See [SECURITY.md](SECURITY.md).
 - **Accessibility:** semantic landmarks, skip link, labelled fields, keyboard-only flow, focus moved to new results, `aria-live` status and alerts, highlights carry **text labels** (not colour alone), the map has a full text list alternative, light/dark themes, `prefers-reduced-motion`.
-- **Efficiency:** one model call per scan, in-memory TTL cache for repeated inputs, coverage recomputed instantly in the browser with the same shared function, hand-drawn SVG map (no chart library), ~73 KB gzipped JS.
+- **Design:** editorial paper-and-ink system (design tokens, one amber accent, serif display + mono labels), light/dark themes, subtle Motion reveals that respect `prefers-reduced-motion`.
+- **Efficiency:** one model call per scan, in-memory TTL cache for repeated inputs, coverage recomputed instantly in the browser with the same shared function, hand-drawn SVG map (no chart library), ~100 KB gzipped JS, immutable cached assets.
 
 ## Run locally
 

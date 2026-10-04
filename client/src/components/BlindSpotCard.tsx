@@ -6,49 +6,55 @@ export interface CardState {
   note: string;
 }
 
-const STATUS_OPTIONS: { value: ReflectionStatus; label: string }[] = [
-  { value: 'considered', label: '✅ I’ve considered this' },
-  { value: 'unknown', label: '🤔 Need to find out' },
-  { value: 'not_relevant', label: '➖ Not relevant to me' },
+export const STATUS_OPTIONS: { value: ReflectionStatus; label: string }[] = [
+  { value: 'considered', label: 'Considered' },
+  { value: 'unknown', label: 'Need to find out' },
+  { value: 'not_relevant', label: 'Not relevant' },
 ];
 
 interface Props {
+  index: number;
   finding: Finding;
   state: CardState;
   onChange: (state: CardState) => void;
 }
 
 /** One blind spot: what we noticed, why it may matter, and a question. The user reflects; we never answer. */
-export function BlindSpotCard({ finding, state, onChange }: Props) {
+export function BlindSpotCard({ index, finding, state, onChange }: Props) {
   const headingId = `${finding.id}-title`;
   return (
-    <article className={`card spot spot-${finding.type}`} aria-labelledby={headingId}>
-      <header>
-        <span className={`badge badge-${finding.type}`}>{FINDING_LABELS[finding.type]}</span>
-        <span className="muted">{AREA_LABELS[finding.area]}</span>
+    <article
+      className={`spot spot-${finding.type}${state.status ? ' is-marked' : ''}`}
+      aria-labelledby={headingId}
+    >
+      <header className="spot-meta">
+        <span className="mono">{String(index + 1).padStart(2, '0')}</span>
+        <span className={`tag tag-${finding.type}`}>{FINDING_LABELS[finding.type]}</span>
+        <span className="mono muted">{AREA_LABELS[finding.area]}</span>
       </header>
 
-      {finding.quote && (
-        <p className="quote">
-          You said: <q>{finding.quote}</q>
-          {finding.quoteB && (
-            <>
-              {' '}
-              but also: <q>{finding.quoteB}</q>
-            </>
-          )}
-        </p>
-      )}
-      {finding.insight && <p>{finding.insight}</p>}
       <h3 id={headingId} className="question">
         {finding.question}
       </h3>
 
-      <fieldset>
+      {finding.quote && (
+        <p className="quote">
+          <span className="mono muted">You said</span> “{finding.quote}”
+          {finding.quoteB && (
+            <>
+              {' '}
+              <span className="mono muted">but also</span> “{finding.quoteB}”
+            </>
+          )}
+        </p>
+      )}
+      {finding.insight && <p className="insight">{finding.insight}</p>}
+
+      <fieldset className="reflect">
         <legend className="visually-hidden">Your reflection on this question</legend>
-        <div className="choices">
+        <div className="segmented">
           {STATUS_OPTIONS.map((option) => (
-            <label key={option.value} className="choice">
+            <label key={option.value} className="segment">
               <input
                 type="radio"
                 name={`status-${finding.id}`}
@@ -56,7 +62,7 @@ export function BlindSpotCard({ finding, state, onChange }: Props) {
                 checked={state.status === option.value}
                 onChange={() => onChange({ ...state, status: option.value })}
               />
-              {option.label}
+              <span>{option.label}</span>
             </label>
           ))}
         </div>
