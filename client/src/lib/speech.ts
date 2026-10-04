@@ -48,6 +48,8 @@ let current: HTMLAudioElement | null = null;
 let context: AudioContext | null = null;
 let sources: AudioBufferSourceNode[] = [];
 let streamAbort: AbortController | null = null;
+/** Set after the server voice fails once; later lines go straight to the browser voice. */
+let serverVoiceDown = false;
 
 /** Creates/resumes the audio context; call from a click so browsers allow playback. */
 export function unlockAudio(): void {
@@ -76,6 +78,7 @@ function fetchVoice(text: string): Promise<string> {
 
 /** Starts loading fixed lines early so they play instantly. */
 export function preloadSpeech(...lines: string[]): void {
+  if (serverVoiceDown) return;
   for (const line of lines) void fetchVoice(line).catch(() => undefined);
 }
 
@@ -180,11 +183,16 @@ function speakWithBrowser(text: string): Promise<void> {
  */
 export async function speak(text: string, { fixed = false } = {}): Promise<void> {
   stopSpeaking();
+  if (serverVoiceDown) {
+    await speakWithBrowser(text);
+    return;
+  }
   try {
     if (fixed || audioCache.has(text)) await playUrl(await fetchVoice(text));
     else await streamSpeech(text);
   } catch (err) {
     if ((err as Error).name === 'AbortError') return;
+    serverVoiceDown = true;
     await speakWithBrowser(text);
   }
 }

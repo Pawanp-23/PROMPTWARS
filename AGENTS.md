@@ -18,7 +18,7 @@ _Last updated: 2026-10-04 · Status: **BUILT — deploying to Render**_
 | Persona              | A person (demo: a student) weighing a real decision who has already formed a leaning                                                                                                                              |
 | Stack                | Vite + React + TypeScript (client) · Node + Express + TypeScript (server) · Vitest · **Render** (Dockerfile also Cloud Run-ready)                                                                                 |
 | Google services      | **Gemini API** (structured JSON output, model fallback `gemini-3.5-flash-lite → 3.1-flash-lite → 3.5-flash → 2.5-flash-lite`) · Cloud Run-ready Dockerfile                                                        |
-| GitHub repo (public) | https://github.com/Pawanp-23/Pawan_patil_PROMPTWARS                                                                                                                                                                           |
+| GitHub repo (public) | https://github.com/Pawanp-23/Pawan_patil_PROMPTWARS                                                                                                                                                               |
 | Live URL             | TBD                                                                                                                                                                                                               |
 | Attempts used        | 0 / 2 — first submission returns a per-criterion score to use as feedback; **only the latest submission counts**                                                                                                  |
 

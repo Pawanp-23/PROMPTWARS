@@ -11,6 +11,3 @@ export const CLOSING_LINE =
  * question is generated. Neutral by design: they never react to which option is better.
  */
 export const FILLERS = ['Ooh, okay.', 'Mm, got it.', 'Okay, okay.', 'Right, hold that thought.'];
-
-/** Lines worth pre-generating on server start so they play with no delay. */
-export const WARM_LINES = [OPENING_LINE, CLOSING_LINE, ...FILLERS];

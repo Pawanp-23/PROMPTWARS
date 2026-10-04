@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
-import { pcmToWav, toPcm, toWav } from '../engine/tts.js';
+import { createCircuitBreaker, pcmToWav, toPcm, toWav } from '../engine/tts.js';
 import type { SpeechClient } from '../engine/tts.js';
 import { fakeClient, goodModelOutput } from './fixtures.js';
 
@@ -116,5 +116,23 @@ describe('toPcm', () => {
     expect(toPcm(pcm.toString('base64'))).toEqual(pcm);
     const wav = pcmToWav(Buffer.alloc(100, 7));
     expect(toPcm(wav.toString('base64'))).toEqual(Buffer.alloc(100, 7));
+  });
+});
+
+describe('createCircuitBreaker', () => {
+  it('opens after a quota error, fails fast during cooldown, then closes', () => {
+    let now = 0;
+    const breaker = createCircuitBreaker(1000, () => now);
+    expect(() => breaker.assertClosed()).not.toThrow();
+    breaker.record(Object.assign(new Error('quota'), { status: 429 }));
+    expect(() => breaker.assertClosed()).toThrow(/cooling down/);
+    now = 1001;
+    expect(() => breaker.assertClosed()).not.toThrow();
+  });
+
+  it('ignores errors that are not quota related', () => {
+    const breaker = createCircuitBreaker(1000, () => 0);
+    breaker.record(Object.assign(new Error('boom'), { status: 500 }));
+    expect(() => breaker.assertClosed()).not.toThrow();
   });
 });

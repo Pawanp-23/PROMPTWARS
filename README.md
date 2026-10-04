@@ -4,7 +4,7 @@
 
 Built for **PromptWars: THE BLIND SPOT** (Google for Developers × Hack2Skill).
 
-**Live demo:** _add Render URL here_ · Click **"Try the internship example"** to run the official problem-statement scenario.
+**Live demo:** https://blindspot-s5sh.onrender.com · Click **"Try the internship example"** to run the official problem-statement scenario.
 
 ---
 

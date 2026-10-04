@@ -4,7 +4,6 @@ import { createApp } from './app.js';
 import { loadConfig, type Config } from './config.js';
 import { createGeminiClient } from './engine/gemini.js';
 import { createGeminiSpeech } from './engine/tts.js';
-import { WARM_LINES } from '../shared/voice.js';
 
 try {
   process.loadEnvFile();
@@ -20,12 +19,8 @@ try {
   process.exit(1);
 }
 
+// Voice lines are generated on demand and cached; no warm-up, so restarts never spend quota.
 const speech = createGeminiSpeech(config.apiKey, config.voiceModels);
-
-// Pre-generate fixed lines in the background so the greeting and fillers play instantly.
-void (async () => {
-  for (const line of WARM_LINES) await speech.synthesize(line).catch(() => undefined);
-})();
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = createApp({
