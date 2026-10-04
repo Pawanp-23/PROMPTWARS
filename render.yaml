@@ -1,13 +1,12 @@
 services:
   - type: web
     name: blindspot
-    runtime: node
+    runtime: docker
     plan: free
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
+    region: singapore
     healthCheckPath: /api/health
     envVars:
-      - key: NODE_VERSION
-        value: 22
       - key: GEMINI_API_KEY
+        sync: false
+      - key: FIRESTORE_SERVICE_ACCOUNT
         sync: false
