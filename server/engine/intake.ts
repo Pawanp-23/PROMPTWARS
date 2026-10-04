@@ -6,12 +6,12 @@ import {
 import { AnalysisError, type ModelClient } from './analyze.js';
 import { containsRecommendation } from './guard.js';
 import { INTAKE_SCHEMA } from './schemas.js';
+import { CLOSING_LINE } from '../../shared/voice.js';
 
 /** After this many user answers the interview wraps up, whatever the model says. */
 export const MAX_USER_TURNS = 6;
 
-export const CLOSING_LINE =
-  'Love it, that’s plenty to work with. Let’s go find what you’re not seeing.';
+export { CLOSING_LINE };
 const FALLBACK_QUESTION = 'Okay, real talk: what’s actually pulling you toward that side?';
 
 export const INTAKE_PROMPT = `You are BlindSpot's voice interviewer. You help a person describe a decision so it can be examined later.

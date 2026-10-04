@@ -2,22 +2,20 @@ import { GoogleGenAI } from '@google/genai';
 import { TtlCache } from './cache.js';
 import { withFallback } from './gemini.js';
 
-/** Turns text into a playable WAV file. */
+/** Turns text into speech: a whole WAV for short fixed lines, or a live PCM stream. */
 export interface SpeechClient {
   synthesize(text: string): Promise<Buffer>;
+  stream(text: string): AsyncIterable<Buffer>;
 }
 
 const TIMEOUT_MS = 20_000;
 export const VOICE_NAME = 'Puck'; // Gemini's upbeat prebuilt voice
-
-/** Performance direction for the voice: a witty, high-energy friend, never a narrator. */
-export const VOICE_DIRECTION =
-  'Read this like an energetic, quick-witted friend: upbeat, warm, a little playful sarcasm, natural pauses, never robotic:';
+export const SAMPLE_RATE = 24_000;
 
 /** Wraps raw 16-bit little-endian mono PCM in a WAV header so browsers can play it. */
 export function pcmToWav(
   pcm: Buffer,
-  sampleRate = 24_000,
+  sampleRate = SAMPLE_RATE,
   channels = 1,
   bitsPerSample = 16,
 ): Buffer {
@@ -43,11 +41,23 @@ export function pcmToWav(
 export function toWav(base64: string, mimeType: string): Buffer {
   const bytes = Buffer.from(base64, 'base64');
   if (/wav/i.test(mimeType)) return bytes;
-  const rate = Number(/rate=(\d+)/i.exec(mimeType)?.[1]) || 24_000;
+  const rate = Number(/rate=(\d+)/i.exec(mimeType)?.[1]) || SAMPLE_RATE;
   return pcmToWav(bytes, rate);
 }
 
-/** Gemini native text-to-speech with model fallback and a cache for repeated lines. */
+/** Normalizes one streamed chunk to raw PCM (drops a WAV header if the model sends one). */
+export function toPcm(base64: string): Buffer {
+  const bytes = Buffer.from(base64, 'base64');
+  const isWav = bytes.length > 44 && bytes.toString('ascii', 0, 4) === 'RIFF';
+  return isWav ? bytes.subarray(44) : bytes;
+}
+
+const speechConfig = { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE_NAME } } };
+
+/**
+ * Gemini native text-to-speech. Only the agent's own words are sent, with no stage
+ * directions, so nothing extra is ever read aloud. Fixed lines are cached.
+ */
 export function createGeminiSpeech(apiKey: string, models: string[]): SpeechClient {
   const ai = new GoogleGenAI({ apiKey });
   const cache = new TtlCache<Buffer>(50, 60 * 60 * 1000);
@@ -61,10 +71,10 @@ export function createGeminiSpeech(apiKey: string, models: string[]): SpeechClie
       const wav = await withFallback(models, async (model) => {
         const response = await ai.models.generateContent({
           model,
-          contents: `${VOICE_DIRECTION} ${text}`,
+          contents: text,
           config: {
             responseModalities: ['AUDIO'],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE_NAME } } },
+            speechConfig,
             abortSignal: AbortSignal.timeout(TIMEOUT_MS),
           },
         });
@@ -75,6 +85,24 @@ export function createGeminiSpeech(apiKey: string, models: string[]): SpeechClie
 
       cache.set(key, wav);
       return wav;
+    },
+
+    async *stream(text) {
+      const chunks = await withFallback(models, (model) =>
+        ai.models.generateContentStream({
+          model,
+          contents: text,
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig,
+            abortSignal: AbortSignal.timeout(TIMEOUT_MS),
+          },
+        }),
+      );
+      for await (const chunk of chunks) {
+        const data = chunk.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (data) yield toPcm(data);
+      }
     },
   };
 }

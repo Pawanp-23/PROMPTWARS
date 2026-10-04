@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
 import { createGeminiClient } from './engine/gemini.js';
 import { createGeminiSpeech } from './engine/tts.js';
+import { WARM_LINES } from '../shared/voice.js';
 
 try {
   process.loadEnvFile();
@@ -34,9 +35,16 @@ const voiceModels = (
 const port = Number(process.env.PORT) || 8080;
 const here = path.dirname(fileURLToPath(import.meta.url));
 
+const speech = createGeminiSpeech(apiKey, voiceModels);
+
+// Pre-generate fixed lines in the background so the greeting and fillers play instantly.
+void (async () => {
+  for (const line of WARM_LINES) await speech.synthesize(line).catch(() => undefined);
+})();
+
 const app = createApp({
   client: createGeminiClient(apiKey, models),
-  speech: createGeminiSpeech(apiKey, voiceModels),
+  speech,
   staticDir: path.resolve(here, '../client'),
 });
 

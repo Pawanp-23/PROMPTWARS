@@ -32,10 +32,21 @@ export function createRecognition(): Recognition | null {
   return recognition;
 }
 
+const SAMPLE_RATE = 24_000;
 const audioCache = new Map<string, Promise<string>>();
 let current: HTMLAudioElement | null = null;
+let context: AudioContext | null = null;
+let sources: AudioBufferSourceNode[] = [];
+let streamAbort: AbortController | null = null;
 
-/** Fetches the human-sounding Gemini voice for a line; returns a playable object URL. */
+/** Creates/resumes the audio context; call from a click so browsers allow playback. */
+export function unlockAudio(): void {
+  if (typeof AudioContext === 'undefined') return;
+  context ??= new AudioContext({ sampleRate: SAMPLE_RATE });
+  void context.resume();
+}
+
+/** Fetches a whole WAV for a fixed line; returns a playable object URL (cached). */
 function fetchVoice(text: string): Promise<string> {
   let pending = audioCache.get(text);
   if (!pending) {
@@ -53,9 +64,72 @@ function fetchVoice(text: string): Promise<string> {
   return pending;
 }
 
-/** Starts loading a line's audio early (e.g. when the user hovers the mic). */
-export function preloadSpeech(text: string): void {
-  void fetchVoice(text).catch(() => undefined);
+/** Starts loading fixed lines early so they play instantly. */
+export function preloadSpeech(...lines: string[]): void {
+  for (const line of lines) void fetchVoice(line).catch(() => undefined);
+}
+
+function playUrl(url: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const audio = new Audio(url);
+    current = audio;
+    audio.onended = () => resolve();
+    audio.onpause = () => resolve();
+    audio.onerror = () => reject(new Error('playback failed'));
+    audio.play().catch(reject);
+  }).finally(() => {
+    current = null;
+  });
+}
+
+/** Converts 16-bit little-endian PCM bytes to float samples. */
+export function pcmToFloat(bytes: Uint8Array): Float32Array {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const samples = new Float32Array(Math.floor(bytes.byteLength / 2));
+  for (let i = 0; i < samples.length; i += 1) samples[i] = view.getInt16(i * 2, true) / 32768;
+  return samples;
+}
+
+/** Streams a live reply and plays each chunk as soon as it arrives (no waiting for the whole clip). */
+async function streamSpeech(text: string): Promise<void> {
+  if (!context) throw new Error('audio locked');
+  const ctx = context;
+  streamAbort = new AbortController();
+  const response = await fetch('/api/speak/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+    signal: streamAbort.signal,
+  });
+  if (!response.ok || !response.body) throw new Error('voice unavailable');
+
+  const reader = response.body.getReader();
+  let playAt = 0;
+  let carry = new Uint8Array(0);
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const bytes = new Uint8Array(carry.length + value.length);
+    bytes.set(carry);
+    bytes.set(value, carry.length);
+    const even = bytes.length - (bytes.length % 2);
+    carry = bytes.slice(even);
+    const samples = pcmToFloat(bytes.subarray(0, even));
+    if (!samples.length) continue;
+
+    const buffer = ctx.createBuffer(1, samples.length, SAMPLE_RATE);
+    buffer.getChannelData(0).set(samples);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    playAt = Math.max(playAt, ctx.currentTime + 0.02);
+    source.start(playAt);
+    playAt += buffer.duration;
+    sources.push(source);
+  }
+  const remaining = playAt - ctx.currentTime;
+  if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining * 1000));
+  sources = [];
 }
 
 /** Picks the most natural-sounding voice the browser offers, for the fallback path. */
@@ -82,7 +156,7 @@ function speakWithBrowser(text: string): Promise<void> {
     const utterance = new SpeechSynthesisUtterance(text);
     const voice = bestBrowserVoice();
     if (voice) utterance.voice = voice;
-    utterance.rate = 1.08;
+    utterance.rate = 1.1;
     utterance.pitch = 1.05;
     utterance.onend = () => resolve();
     utterance.onerror = () => resolve();
@@ -90,27 +164,32 @@ function speakWithBrowser(text: string): Promise<void> {
   });
 }
 
-/** Speaks a line with Gemini's voice, falling back to the browser voice. Resolves when done. */
-export async function speak(text: string): Promise<void> {
+/**
+ * Speaks a line: cached WAV for fixed lines, live streaming for new replies,
+ * and the browser voice as a last resort. Resolves when speech finishes.
+ */
+export async function speak(text: string, { fixed = false } = {}): Promise<void> {
   stopSpeaking();
   try {
-    const url = await fetchVoice(text);
-    await new Promise<void>((resolve, reject) => {
-      const audio = new Audio(url);
-      current = audio;
-      audio.onended = () => resolve();
-      audio.onpause = () => resolve();
-      audio.onerror = () => reject(new Error('playback failed'));
-      audio.play().catch(reject);
-    });
-  } catch {
+    if (fixed || audioCache.has(text)) await playUrl(await fetchVoice(text));
+    else await streamSpeech(text);
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') return;
     await speakWithBrowser(text);
-  } finally {
-    current = null;
   }
 }
 
 export function stopSpeaking(): void {
+  streamAbort?.abort();
+  streamAbort = null;
+  for (const source of sources) {
+    try {
+      source.stop();
+    } catch {
+      // already stopped
+    }
+  }
+  sources = [];
   current?.pause();
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
 }

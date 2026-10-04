@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { m } from 'motion/react';
 import type { IntakeResponse, IntakeTurn } from '../../../shared/schema';
-import { OPENING_LINE } from '../../../shared/voice';
+import { CLOSING_LINE, FILLERS, OPENING_LINE } from '../../../shared/voice';
 import { intake } from '../lib/api';
 import {
   createRecognition,
   preloadSpeech,
   speak,
   stopSpeaking,
+  unlockAudio,
   type Recognition,
 } from '../lib/speech';
 
@@ -89,10 +90,10 @@ export function VoiceAgent({ onComplete }: Props) {
     recognition.start();
   };
 
-  const say = async (text: string, then: () => void) => {
-    // The caption shows the line immediately; audio follows as soon as it is ready.
+  const say = async (text: string, then: () => void, fixed = false) => {
+    // The caption shows the line immediately; audio streams in as it is generated.
     setPhase('speaking');
-    await speak(text);
+    await speak(text, { fixed });
     then();
   };
 
@@ -100,8 +101,11 @@ export function VoiceAgent({ onComplete }: Props) {
     pushTurn({ role: 'user', text: text.slice(0, 600) });
     setPhase('thinking');
     setError('');
+    // Acknowledge instantly (pre-generated) while the next question is being written.
+    const filler = speak(FILLERS[turnsRef.current.length % FILLERS.length], { fixed: true });
     try {
       const next = await intake({ history: turnsRef.current.slice(-14) });
+      await filler;
       pushTurn({ role: 'agent', text: next.reply });
       if (next.done) {
         await say(next.reply, () => {
@@ -119,9 +123,15 @@ export function VoiceAgent({ onComplete }: Props) {
 
   const start = () => {
     setError('');
+    unlockAudio();
+    preloadSpeech(...FILLERS, CLOSING_LINE);
     if (!turnsRef.current.length) pushTurn({ role: 'agent', text: OPENING_LINE });
     const lastAgent = [...turnsRef.current].reverse().find((t) => t.role === 'agent');
-    void say(lastAgent?.text ?? OPENING_LINE, voiceSupported ? listen : () => setPhase('idle'));
+    void say(
+      lastAgent?.text ?? OPENING_LINE,
+      voiceSupported ? listen : () => setPhase('idle'),
+      !lastAgent || lastAgent.text === OPENING_LINE,
+    );
   };
 
   const stop = () => {
@@ -134,6 +144,7 @@ export function VoiceAgent({ onComplete }: Props) {
     event.preventDefault();
     const text = typed.trim();
     if (!text || phase === 'thinking') return;
+    unlockAudio();
     if (!turnsRef.current.length) pushTurn({ role: 'agent', text: OPENING_LINE });
     recognitionRef.current?.abort();
     stopSpeaking();
