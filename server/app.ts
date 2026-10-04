@@ -65,7 +65,7 @@ export function createApp({
   app.use(express.json({ limit: '20kb' }));
 
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', storage: store.kind });
   });
 
   const limiter = () =>

@@ -16,7 +16,7 @@ describe('API', () => {
       '/api/health',
     );
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok' });
+    expect(res.body).toEqual({ status: 'ok', storage: 'memory' });
   });
 
   it('sets security headers', async () => {
